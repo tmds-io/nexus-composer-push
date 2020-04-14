@@ -4,6 +4,7 @@
 namespace Elendev\NexusComposerPush;
 
 use Composer\Command\BaseCommand;
+use Composer\Config;
 use Composer\IO\IOInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
@@ -22,29 +23,39 @@ class PushCommand extends BaseCommand
      */
     private $client;
 
+    /**
+     * @var string
+     */
+    private $projectVendorDir;
+
+    /**
+     * @var string
+     */
+    private $globalVendorDir;
+
     protected function configure()
     {
         $this
-          ->setName('nexus-push')
-          ->setDescription('Initiate a push to a distant Nexus repository')
-          ->setDefinition([
-            new InputArgument('version', InputArgument::REQUIRED, 'The package version'),
-            new InputOption('name', null, InputArgument::OPTIONAL, 'Name of the package (if different from the composer.json file)'),
-            new InputOption('url', null, InputArgument::OPTIONAL, 'URL to the distant Nexus repository'),
-            new InputOption(
-                'username',
-                null,
-                InputArgument::OPTIONAL,
-                'Username to log in the distant Nexus repository'
-            ),
-            new InputOption('password', null, InputArgument::OPTIONAL, 'Password to log in the distant Nexus repository'),
-            new InputOption('ignore', 'i', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Directories and files to ignore when creating the zip'),
-            new InputOption('ignore-dirs', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, '<error>DEPRECATED</error> Directories to ignore when creating the zip'),
-            new InputOption('ignore-by-git-attributes', null, InputOption::VALUE_NONE, 'Ignore .gitattrbutes export-ignore directories when creating the zip'),
-            new InputOption('ignore-by-composer', null, InputOption::VALUE_NONE, 'Ignore composer.json archive-exclude files and directories when creating the zip'),
-          ])
-          ->setHelp(
-              <<<EOT
+            ->setName('nexus-push')
+            ->setDescription('Initiate a push to a distant Nexus repository')
+            ->setDefinition([
+                new InputArgument('version', InputArgument::REQUIRED, 'The package version'),
+                new InputOption('name', null, InputArgument::OPTIONAL, 'Name of the package (if different from the composer.json file)'),
+                new InputOption('url', null, InputArgument::OPTIONAL, 'URL to the distant Nexus repository'),
+                new InputOption(
+                    'username',
+                    null,
+                    InputArgument::OPTIONAL,
+                    'Username to log in the distant Nexus repository'
+                ),
+                new InputOption('password', null, InputArgument::OPTIONAL, 'Password to log in the distant Nexus repository'),
+                new InputOption('ignore', 'i', InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, 'Directories and files to ignore when creating the zip'),
+                new InputOption('ignore-dirs', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY, '<error>DEPRECATED</error> Directories to ignore when creating the zip'),
+                new InputOption('ignore-by-git-attributes', null, InputOption::VALUE_NONE, 'Ignore .gitattrbutes export-ignore directories when creating the zip'),
+                new InputOption('ignore-by-composer', null, InputOption::VALUE_NONE, 'Ignore composer.json archive-exclude files and directories when creating the zip'),
+            ])
+            ->setHelp(
+                <<<EOT
 The <info>nexus-push</info> command uses the archive command to create a ZIP
 archive and send it to the configured (or given) nexus repository.
 EOT
@@ -53,7 +64,7 @@ EOT
     }
 
     /**
-     * @param \Symfony\Component\Console\Input\InputInterface $input
+     * @param \Symfony\Component\Console\Input\InputInterface   $input
      * @param \Symfony\Component\Console\Output\OutputInterface $output
      *
      * @return int|null|void
@@ -87,7 +98,7 @@ EOT
                 $subdirectory,
                 $ignoredDirectories,
                 $this->getIO()
-          );
+            );
 
             $url = $this->generateUrl(
                 $input->getOption('url'),
@@ -96,27 +107,27 @@ EOT
             );
 
             $this->getIO()
-              ->write(
-                  'Execute the Nexus Push for the URL ' . $url . '...',
-                  true
-              );
+                ->write(
+                    'Execute the Nexus Push for the URL ' . $url . '...',
+                    true
+                );
 
             $this->sendFile(
                 $url,
                 $fileName,
                 $input->getOption('username'),
                 $input->getOption('password')
-          );
+            );
 
             $this->getIO()
-              ->write('Archive correctly pushed to the Nexus server');
+                ->write('Archive correctly pushed to the Nexus server');
         } finally {
             $this->getIO()
-              ->write(
-                  'Remove file ' . $fileName,
-                  true,
-                  IOInterface::VERY_VERBOSE
-              );
+                ->write(
+                    'Remove file ' . $fileName,
+                    true,
+                    IOInterface::VERY_VERBOSE
+                );
             unlink($fileName);
         }
     }
@@ -159,8 +170,8 @@ EOT
      * in an `auth.json` file or in the
      * `extra` section
      *
-     * @param string $url URL to send the file to
-     * @param string $filePath path to the file to send
+     * @param string      $url      URL to send the file to
+     * @param string      $filePath path to the file to send
      * @param string|null $username
      * @param string|null $password
      *
@@ -188,11 +199,11 @@ EOT
 
 
             if (preg_match(
-                '{^(?:https?)://([^/]+)(?:/.*)?}',
-                $url,
-                $match
-            ) && $this->getIO()->hasAuthentication($match[1])) {
-                $auth = $this->getIO()->getAuthentication($match[1]);
+                    '{^(?:https?)://([^/]+)(?:/.*)?}',
+                    $url,
+                    $match
+                ) && $this->getIO()->hasAuthentication($match[1])) {
+                $auth                     = $this->getIO()->getAuthentication($match[1]);
                 $credentials['auth.json'] = [
                     'username' => $auth['username'],
                     'password' => $auth['password'],
@@ -204,14 +215,14 @@ EOT
 
             foreach ($credentials as $type => $credential) {
                 $this->getIO()
-                  ->write(
-                      '[postFile] Trying credentials ' . $type,
-                      true,
-                      IOInterface::VERY_VERBOSE
-                  );
+                    ->write(
+                        '[postFile] Trying credentials ' . $type,
+                        true,
+                        IOInterface::VERY_VERBOSE
+                    );
 
                 $options = [
-                  'body' => fopen($filePath, 'r'),
+                    'body' => fopen($filePath, 'r'),
                 ];
 
                 if (!empty($credential)) {
@@ -221,25 +232,25 @@ EOT
                 try {
                     if (empty($credential) || empty($credential['username']) || empty($credential['password'])) {
                         $this->getIO()
-                          ->write(
-                              '[postFile] Use no credentials',
-                              true,
-                              IOInterface::VERY_VERBOSE
-                          );
+                            ->write(
+                                '[postFile] Use no credentials',
+                                true,
+                                IOInterface::VERY_VERBOSE
+                            );
                         $this->postFile($url, $filePath);
                     } else {
                         $this->getIO()
-                          ->write(
-                              '[postFile] Use user ' . $credential['username'],
-                              true,
-                              IOInterface::VERY_VERBOSE
-                          );
+                            ->write(
+                                '[postFile] Use user ' . $credential['username'],
+                                true,
+                                IOInterface::VERY_VERBOSE
+                            );
                         $this->postFile(
                             $url,
                             $filePath,
                             $credential['username'],
                             $credential['password']
-                      );
+                        );
                     }
 
                     return;
@@ -247,26 +258,26 @@ EOT
                     if ($e->getResponse()->getStatusCode() === '401') {
                         if ($type === 'none') {
                             $this->getIO()
-                              ->write(
-                                  'Unable to push on server (authentication required)',
-                                  true,
-                                  IOInterface::VERY_VERBOSE
-                              );
+                                ->write(
+                                    'Unable to push on server (authentication required)',
+                                    true,
+                                    IOInterface::VERY_VERBOSE
+                                );
                         } else {
                             $this->getIO()
-                              ->write(
-                                  'Unable to authenticate on server with credentials ' . $type,
-                                  true,
-                                  IOInterface::VERY_VERBOSE
-                              );
+                                ->write(
+                                    'Unable to authenticate on server with credentials ' . $type,
+                                    true,
+                                    IOInterface::VERY_VERBOSE
+                                );
                         }
                     } else {
                         $this->getIO()
-                          ->writeError(
-                              'A network error occured while trying to upload to nexus: ' . $e->getMessage(),
-                              true,
-                              IOInterface::QUIET
-                          );
+                            ->writeError(
+                                'A network error occured while trying to upload to nexus: ' . $e->getMessage(),
+                                true,
+                                IOInterface::QUIET
+                            );
                     }
                 }
             }
@@ -289,7 +300,7 @@ EOT
     private function postFile($url, $file, $username = null, $password = null)
     {
         $options = [
-            'body' => fopen($file, 'r'),
+            'body'  => fopen($file, 'r'),
             'debug' => $this->getIO()->isVeryVerbose(),
         ];
 
@@ -308,28 +319,12 @@ EOT
     {
         if (empty($this->client)) {
             // https://github.com/composer/composer/issues/5998
-            $composer = $this->getComposer(true);
-            $autoload = $composer->getConfig()
-                    ->get('vendor-dir') . '/autoload.php';
-
-            // Show an error if the file wasn't found in the current project.
-            if (!file_exists($autoload)) {
-                throw new FileNotFoundException("vendor/autoload.php not found, did you run composer install?");
-            }
+            $autoload = $this->getVendorFile('/autoload.php');
 
             // Require the guzzle functions manually.
-            $guzzlefunctions = $composer->getConfig()->get('vendor-dir') . '/guzzlehttp/guzzle/src/functions_include.php';
-            if (!file_exists($guzzlefunctions)) {
-                throw new FileNotFoundException("$guzzlefunctions not found, is guzzle installed?");
-            }
-            $guzzlepsr7functions = $composer->getConfig()->get('vendor-dir') . '/guzzlehttp/psr7/src/functions_include.php';
-            if (!file_exists($guzzlepsr7functions)) {
-                throw new FileNotFoundException("$guzzlepsr7functions not found, is guzzle installed?");
-            }
-            $guzzlepromisesfunctions = $composer->getConfig()->get('vendor-dir') . '/guzzlehttp/promises/src/functions_include.php';
-            if (!file_exists($guzzlepromisesfunctions)) {
-                throw new FileNotFoundException("$guzzlepromisesfunctions not found, is guzzle installed?");
-            }
+            $guzzlefunctions         = $this->getVendorFile('/guzzlehttp/guzzle/src/functions_include.php');
+            $guzzlepsr7functions     = $this->getVendorFile('/guzzlehttp/psr7/src/functions_include.php');
+            $guzzlepromisesfunctions = $this->getVendorFile('/guzzlehttp/promises/src/functions_include.php');
             require $guzzlefunctions;
             require $guzzlepsr7functions;
             require $guzzlepromisesfunctions;
@@ -338,6 +333,55 @@ EOT
             $this->client = new Client();
         }
         return $this->client;
+    }
+
+    private function getProjectVendorDir()
+    {
+        if (!$this->projectVendorDir) {
+            $composer  = $this->getComposer(true);
+            $vendorDir = $composer->getConfig()->get('vendor-dir');
+
+            // Show an error if the file wasn't found in the current project.
+            if (file_exists($vendorDir . '/elendev/nexus-composer-push')) {
+                $this->projectVendorDir = $vendorDir;
+            }
+        }
+
+        return $this->projectVendorDir;
+    }
+
+    private function getGlobalVendorDir()
+    {
+        if (!$this->globalVendorDir) {
+            $composer  = $this->getComposer(true);
+            $vendorDir = $composer->getConfig()->get('data-dir') . '/' . $composer->getConfig()->get('vendor-dir', Config::RELATIVE_PATHS);
+
+            // Show an error if the file wasn't found in the current project.
+            if (file_exists($vendorDir . '/elendev/nexus-composer-push')) {
+                $this->globalVendorDir = $vendorDir;
+            }
+        }
+
+        return $this->globalVendorDir;
+    }
+
+    private function getVendorFile($file)
+    {
+        try {
+            $vendorDir  = $this->getProjectVendorDir();
+            $vendorFile = $vendorDir . $file;
+            if (!file_exists($vendorFile)) {
+                throw new FileNotFoundException("$file not found, is guzzle installed?");
+            }
+        } catch (FileNotFoundException $e) {
+            $vendorDir = $this->getGlobalVendorDir();
+            $vendorFile = $vendorDir . $file;
+            if (!file_exists($vendorFile)) {
+                throw new FileNotFoundException("$file not found, is guzzle installed?");
+            }
+        }
+
+        return $vendorFile;
     }
 
     /**
@@ -359,7 +403,7 @@ EOT
     /**
      * Get the Nexus extra values if available
      *
-     * @param $parameter
+     * @param      $parameter
      * @param null $default
      *
      * @return array|string|null
@@ -386,11 +430,11 @@ EOT
         // Remove after removal of --ignore-dirs option
         $deprecatedIgnores = $this->getDirectoriesToIgnore($input);
 
-        $optionalIgnore = $input->getOption('ignore');
-        $composerIgnores = $this->getNexusExtra('ignore', []);
-        $gitAttrIgnores = $this->getGitAttributesExportIgnores($input);
+        $optionalIgnore      = $input->getOption('ignore');
+        $composerIgnores     = $this->getNexusExtra('ignore', []);
+        $gitAttrIgnores      = $this->getGitAttributesExportIgnores($input);
         $composerJsonIgnores = $this->getComposerJsonArchiveExcludeIgnores($input);
-        $defaultIgnores = ['vendor/'];
+        $defaultIgnores      = ['vendor/'];
 
         $ignore = array_merge($deprecatedIgnores, $composerIgnores, $optionalIgnore, $gitAttrIgnores, $composerJsonIgnores, $defaultIgnores);
         return array_unique($ignore);
@@ -403,7 +447,7 @@ EOT
      */
     private function getDirectoriesToIgnore(InputInterface $input)
     {
-        $optionalIgnore = $input->getOption('ignore-dirs');
+        $optionalIgnore  = $input->getOption('ignore-dirs');
         $composerIgnores = $this->getNexusExtra('ignore-dirs', []);
 
         if (!empty($optionalIgnore)) {
@@ -421,7 +465,7 @@ EOT
     private function getGitAttributesExportIgnores(InputInterface $input)
     {
         $option = $input->getOption('ignore-by-git-attributes');
-        $extra = $this->getNexusExtra('ignore-by-git-attributes', false);
+        $extra  = $this->getNexusExtra('ignore-by-git-attributes', false);
         if (!$option && !$extra) {
             return [];
         }
@@ -432,8 +476,8 @@ EOT
         }
 
         $contents = file_get_contents($path);
-        $lines = explode(PHP_EOL, $contents);
-        $ignores = [];
+        $lines    = explode(PHP_EOL, $contents);
+        $ignores  = [];
         foreach ($lines as $line) {
             if ($line = trim($line)) {
                 // ignore if end with `export-ignore`
@@ -450,20 +494,20 @@ EOT
     private function getComposerJsonArchiveExcludeIgnores(InputInterface $input)
     {
         $option = $input->getOption('ignore-by-composer');
-        $extra = $this->getNexusExtra('ignore-by-composer', false);
+        $extra  = $this->getNexusExtra('ignore-by-composer', false);
         if (!$option && !$extra) {
             return [];
         }
 
         $path = getcwd() . '/composer.json';
-        
-        $contents = file_get_contents($path);
+
+        $contents     = file_get_contents($path);
         $jsonContents = json_decode($contents, true);
-        $ignores = [];
+        $ignores      = [];
         if (array_key_exists('archive', $jsonContents) && array_key_exists('exclude', $jsonContents['archive'])) {
             foreach ($jsonContents['archive']['exclude'] as $exclude) {
                 $ignores[] = trim($exclude, DIRECTORY_SEPARATOR);
-            }   
+            }
         }
 
         return $ignores;
